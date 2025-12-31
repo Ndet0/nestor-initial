@@ -113,3 +113,6 @@ export const getPlaceById = (id) => {
 export const getFeaturedPlaces = () => {
   return PLACES_DATA.filter(place => place.featured);
 };
+
+// Default export for backward-compatible imports
+export default PLACES_DATA;
