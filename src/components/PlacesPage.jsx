@@ -2,20 +2,26 @@ import { useEffect, useState } from "react";
 import PlaceCard from "./PlaceCard";
 import "./PlacesPage.css";
 
+const API_URL = import.meta.env.VITE_API_URL;
+
 function PlacesPage() {
   const [places, setPlaces] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch("http://localhost:4000/api/places")
-      .then(res => res.json())
+    fetch(`${API_URL}/api/places`)
+      .then(res => {
+        if (!res.ok) throw new Error("Failed to load places");
+        return res.json();
+      })
       .then(data => {
         setPlaces(data);
         setLoading(false);
       })
       .catch(err => {
-        console.error(err);
+        setError(err.message);
         setLoading(false);
       });
   }, []);
@@ -32,6 +38,23 @@ function PlacesPage() {
 
   if (loading) {
     return <div className="text-center text-white py-20">Loading places...</div>;
+  }
+
+  if (error) {
+    return (
+      <div className="places-page container">
+        <div className="text-center py-20">
+          <h2 className="text-xl text-white mb-4">Something went wrong</h2>
+          <p className="text-gray-400 mb-6">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="filter-btn active"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
