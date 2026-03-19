@@ -1,49 +1,46 @@
-// src/components/HeaderNav.jsx
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useState } from "react";
 import "./HeaderNav.css";
 
 function HeaderNav() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const location = useLocation();
+  const [prevPathname, setPrevPathname] = useState(location.pathname);
+
+  if (prevPathname !== location.pathname) {
+    setPrevPathname(location.pathname);
+    if (menuOpen) setMenuOpen(false);
+  }
 
   return (
-    <header className="header">
+    <header className="header" role="banner">
       <div className="nav-container">
-        {/* Logo */}
         <Link to="/" className="logo">
           Nestor
         </Link>
 
-        {/* Desktop Nav */}
-        <nav className="nav-links">
+        <nav className="nav-links" aria-label="Main navigation">
           <NavLink to="/places">Places</NavLink>
           <NavLink to="/about">About</NavLink>
           <NavLink to="/contact">Contact</NavLink>
         </nav>
 
-        {/* Mobile Toggle */}
         <button
           className="menu-toggle"
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Toggle menu"
+          onClick={() => setMenuOpen((prev) => !prev)}
+          aria-label="Toggle navigation menu"
+          aria-expanded={menuOpen}
         >
-          ☰
+          {menuOpen ? "✕" : "☰"}
         </button>
       </div>
 
-      {/* Mobile Menu */}
       {menuOpen && (
-        <div className="mobile-menu">
-          <NavLink to="/places" onClick={() => setMenuOpen(false)}>
-            Places
-          </NavLink>
-          <NavLink to="/about" onClick={() => setMenuOpen(false)}>
-            About
-          </NavLink>
-          <NavLink to="/contact" onClick={() => setMenuOpen(false)}>
-            Contact
-          </NavLink>
-        </div>
+        <nav className="mobile-menu" aria-label="Mobile navigation">
+          <NavLink to="/places">Places</NavLink>
+          <NavLink to="/about">About</NavLink>
+          <NavLink to="/contact">Contact</NavLink>
+        </nav>
       )}
     </header>
   );

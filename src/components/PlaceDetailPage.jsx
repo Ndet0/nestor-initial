@@ -1,41 +1,68 @@
-// src/components/PlaceDetailPage.jsx
 import { useParams, Link } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { fetchPlaceById } from "../utils/api";
 import "./PlaceDetailPage.css";
 
-const API_URL = import.meta.env.VITE_API_URL;
+const FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1469474968028-56623f02e42e?w=1600&q=80";
 
 function PlaceDetailPage() {
   const { id } = useParams();
   const [place, setPlace] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [prevId, setPrevId] = useState(id);
+
+  if (prevId !== id) {
+    setPrevId(id);
+    setPlace(null);
+    setError(null);
+  }
+
+  const loading = !place && !error;
 
   useEffect(() => {
-    fetch(`${API_URL}/api/places/${id}`)
-      .then(res => {
-        if (!res.ok) throw new Error("Place not found");
-        return res.json();
+    let cancelled = false;
+
+    fetchPlaceById(id)
+      .then((data) => {
+        if (!cancelled) setPlace(data);
       })
-      .then(data => {
-        setPlace(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
+      .catch((err) => {
+        if (!cancelled) setError(err.message);
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [id]);
 
   if (loading) {
-    return <div className="container text-center py-20">Loading...</div>;
+    return (
+      <div className="place-detail">
+        <div className="detail-hero detail-hero--loading" />
+        <div className="container detail-content">
+          <div className="detail-main">
+            <div className="skeleton skeleton-title" />
+            <div className="skeleton skeleton-text" />
+            <div className="skeleton skeleton-text short" />
+          </div>
+          <aside className="detail-sidebar">
+            <div className="skeleton skeleton-card" />
+          </aside>
+        </div>
+      </div>
+    );
   }
 
   if (error || !place) {
     return (
       <div className="container place-not-found">
-        <h2>Place not found</h2>
-        <p>The place you're looking for doesn't exist.</p>
+        <h2>{error === "Place not found" ? "Place not found" : "Something went wrong"}</h2>
+        <p>
+          {error === "Place not found"
+            ? "The place you're looking for doesn't exist."
+            : error || "An unexpected error occurred."}
+        </p>
         <Link to="/places" className="primary-btn">
           Back to Places
         </Link>
@@ -43,19 +70,20 @@ function PlaceDetailPage() {
     );
   }
 
-  // Support both single image and images array
-  const heroImage = place.images?.[0] || place.image;
+  const heroImage = place.images?.[0] || place.image || FALLBACK_IMAGE;
 
   return (
-    <div className="place-detail">
-      {/* Hero Image */}
+    <article className="place-detail">
+      {/* Hero */}
       <section
         className="detail-hero"
         style={{ backgroundImage: `url(${heroImage})` }}
+        role="img"
+        aria-label={`Photo of ${place.name}`}
       >
         <div className="detail-overlay">
           <h1>{place.name}</h1>
-          <p>{place.location}</p>
+          <p>{place.location}, {place.county}</p>
         </div>
       </section>
 
@@ -63,7 +91,7 @@ function PlaceDetailPage() {
       <section className="container detail-content">
         <div className="detail-main">
           <h2>About this place</h2>
-          <p>{place.description}</p>
+          <p>{place.description || "No description available."}</p>
 
           {place.highlights?.length > 0 && (
             <>
@@ -76,10 +104,14 @@ function PlaceDetailPage() {
             </>
           )}
 
-          {place.tips && (
+          {place.facilities?.length > 0 && (
             <>
-              <h3>Tips</h3>
-              <p>{place.tips}</p>
+              <h3>Facilities</h3>
+              <ul>
+                {place.facilities.map((item, idx) => (
+                  <li key={idx}>{item}</li>
+                ))}
+              </ul>
             </>
           )}
         </div>
@@ -99,7 +131,11 @@ function PlaceDetailPage() {
             {place.price !== undefined && (
               <div className="info-row">
                 <span>Price</span>
-                <span>{place.price === 0 ? "Free" : `KES ${place.price}`}</span>
+                <span>
+                  {place.price === 0
+                    ? "Free"
+                    : `KES ${Number(place.price).toLocaleString()}`}
+                </span>
               </div>
             )}
 
@@ -138,24 +174,24 @@ function PlaceDetailPage() {
               {place.phone && (
                 <div className="info-row">
                   <span>Phone</span>
-                  <span>{place.phone}</span>
+                  <a href={`tel:${place.phone}`}>{place.phone}</a>
                 </div>
               )}
               {place.email && (
                 <div className="info-row">
                   <span>Email</span>
-                  <span>{place.email}</span>
+                  <a href={`mailto:${place.email}`}>{place.email}</a>
                 </div>
               )}
             </div>
           )}
 
           <Link to="/places" className="back-link">
-            ← Back to places
+            &larr; Back to places
           </Link>
         </aside>
       </section>
-    </div>
+    </article>
   );
 }
 

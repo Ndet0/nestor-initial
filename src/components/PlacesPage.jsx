@@ -1,51 +1,83 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
+import { Search } from "lucide-react";
+import { fetchPlaces } from "../utils/api";
 import PlaceCard from "./PlaceCard";
 import "./PlacesPage.css";
-
-const API_URL = import.meta.env.VITE_API_URL;
 
 function PlacesPage() {
   const [places, setPlaces] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCounty, setSelectedCounty] = useState("All Counties");
+  const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    fetch(`${API_URL}/api/places`)
-      .then(res => {
-        if (!res.ok) throw new Error("Failed to load places");
-        return res.json();
+    let cancelled = false;
+
+    fetchPlaces()
+      .then((data) => {
+        if (!cancelled) {
+          setPlaces(data);
+          setLoading(false);
+        }
       })
-      .then(data => {
-        setPlaces(data);
-        setLoading(false);
-      })
-      .catch(err => {
-        setError(err.message);
-        setLoading(false);
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err.message);
+          setLoading(false);
+        }
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const categories = [
-    "All",
-    ...new Set(places.map(place => place.category).filter(Boolean))
-  ];
+  const categories = useMemo(
+    () => ["All", ...new Set(places.map((p) => p.category).filter(Boolean))],
+    [places]
+  );
 
-  const filteredPlaces =
-    selectedCategory === "All"
-      ? places
-      : places.filter(place => place.category === selectedCategory);
+  const counties = useMemo(
+    () => [
+      "All Counties",
+      ...new Set(places.map((p) => p.county).filter(Boolean)),
+    ],
+    [places]
+  );
+
+  const filteredPlaces = useMemo(() => {
+    return places.filter((place) => {
+      const matchesCategory =
+        selectedCategory === "All" || place.category === selectedCategory;
+      const matchesCounty =
+        selectedCounty === "All Counties" || place.county === selectedCounty;
+      const matchesSearch =
+        !searchQuery ||
+        place.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        place.location.toLowerCase().includes(searchQuery.toLowerCase());
+      return matchesCategory && matchesCounty && matchesSearch;
+    });
+  }, [places, selectedCategory, selectedCounty, searchQuery]);
 
   if (loading) {
-    return <div className="text-center text-white py-20">Loading places...</div>;
+    return (
+      <div className="places-page container">
+        <div className="loading-state">
+          <div className="spinner" />
+          <p>Loading places...</p>
+        </div>
+      </div>
+    );
   }
 
   if (error) {
     return (
       <div className="places-page container">
-        <div className="text-center py-20">
-          <h2 className="text-xl text-white mb-4">Something went wrong</h2>
-          <p className="text-gray-400 mb-6">{error}</p>
+        <div className="error-state">
+          <h2>Something went wrong</h2>
+          <p>{error}</p>
           <button
             onClick={() => window.location.reload()}
             className="filter-btn active"
@@ -67,33 +99,75 @@ function PlacesPage() {
         </p>
       </header>
 
-      {/* Category Filter */}
-      <div className="category-filter">
-        {categories.map(category => (
-          <button
-            key={category}
-            className={
-              category === selectedCategory
-                ? "filter-btn active"
-                : "filter-btn"
-            }
-            onClick={() => setSelectedCategory(category)}
-          >
-            {category}
-          </button>
-        ))}
+      {/* Search */}
+      <div className="search-bar">
+        <Search className="search-icon" size={18} />
+        <input
+          type="text"
+          placeholder="Search by name or location…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          aria-label="Search places"
+        />
       </div>
 
-      {/* Places Grid */}
+      {/* Filters */}
+      <div className="filters-row">
+        <div className="category-filter">
+          {categories.map((category) => (
+            <button
+              key={category}
+              className={
+                category === selectedCategory
+                  ? "filter-btn active"
+                  : "filter-btn"
+              }
+              onClick={() => setSelectedCategory(category)}
+            >
+              {category}
+            </button>
+          ))}
+        </div>
+
+        <select
+          className="county-select"
+          value={selectedCounty}
+          onChange={(e) => setSelectedCounty(e.target.value)}
+          aria-label="Filter by county"
+        >
+          {counties.map((county) => (
+            <option key={county} value={county}>
+              {county}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      {/* Results count */}
+      <p className="results-count">
+        {filteredPlaces.length} place{filteredPlaces.length !== 1 ? "s" : ""} found
+      </p>
+
+      {/* Grid */}
       {filteredPlaces.length > 0 ? (
         <section className="places-grid">
-          {filteredPlaces.map(place => (
+          {filteredPlaces.map((place) => (
             <PlaceCard key={place.id} place={place} />
           ))}
         </section>
       ) : (
         <div className="empty-state">
-          <p>No places found for this category.</p>
+          <p>No places match your filters.</p>
+          <button
+            className="filter-btn active"
+            onClick={() => {
+              setSelectedCategory("All");
+              setSelectedCounty("All Counties");
+              setSearchQuery("");
+            }}
+          >
+            Clear Filters
+          </button>
         </div>
       )}
     </div>

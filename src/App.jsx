@@ -5,53 +5,22 @@ import PlaceDetailPage from "./components/PlaceDetailPage";
 import AboutPage from "./components/AboutPage";
 import ContactPage from "./components/ContactPage";
 import AdminPlaceForm from "./components/AdminPlaceForm";
+import NotFoundPage from "./components/NotFoundPage";
 import Layout from "./components/Layout";
 
 function App() {
   return (
     <Routes>
-      {/* Landing page */}
       <Route path="/" element={<LandingPage />} />
 
-      {/* Admin page (NO public layout) */}
       <Route path="/admin" element={<AdminPlaceForm />} />
 
-      {/* Public pages with layout */}
-      <Route
-        path="/places"
-        element={
-          <Layout>
-            <PlacesPage />
-          </Layout>
-        }
-      />
+      <Route path="/places" element={<Layout><PlacesPage /></Layout>} />
+      <Route path="/place/:id" element={<Layout><PlaceDetailPage /></Layout>} />
+      <Route path="/about" element={<Layout><AboutPage /></Layout>} />
+      <Route path="/contact" element={<Layout><ContactPage /></Layout>} />
 
-      <Route
-        path="/place/:id"
-        element={
-          <Layout>
-            <PlaceDetailPage />
-          </Layout>
-        }
-      />
-
-      <Route
-        path="/about"
-        element={
-          <Layout>
-            <AboutPage />
-          </Layout>
-        }
-      />
-
-      <Route
-        path="/contact"
-        element={
-          <Layout>
-            <ContactPage />
-          </Layout>
-        }
-      />
+      <Route path="*" element={<Layout><NotFoundPage /></Layout>} />
     </Routes>
   );
 }
